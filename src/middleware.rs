@@ -83,9 +83,15 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for CompressMiddlew
         // Propagate to route
         let mut res: Response = next.run(req).await;
 
+        let is_wasm: bool = match res.header("Content-Type") {
+            Some(value) => value == "application/wasm",
+            None => false,
+        };
+
         // Head requests should have no body to compress.
         // Can't tell if we can compress if there is no Accepts-Encoding header.
-        if is_head || accepts.is_none() {
+        // For WASM files don't do anything.
+        if is_head || accepts.is_none() || is_wasm {
             return Ok(res);
         }
         let mut accepts = accepts.unwrap();
